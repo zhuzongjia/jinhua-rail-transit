@@ -24,6 +24,14 @@
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   };
 
+  // 取本地时区的日期键（数据库里的时间存的是 UTC ISO，直接截取会和本地日期错位）
+  const dateKey = (v) => {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d)) return String(v).slice(0, 10);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+
   function rollingNumber(el, target, duration = 600) {
     if (!el) return;
     const start = parseInt(el.textContent, 10) || 0;
@@ -71,8 +79,8 @@
     const today = todayStr();
     const month = today.slice(0, 7);
     const now = new Date();
-    const todayTickets = tickets.filter(t => (t.create_date || '').startsWith(today));
-    const monthTickets = tickets.filter(t => (t.create_date || '').startsWith(month));
+    const todayTickets = tickets.filter(t => dateKey(t.create_date) === today);
+    const monthTickets = tickets.filter(t => dateKey(t.create_date).startsWith(month));
 
     fillStats('today', summarize(todayTickets, now));
     fillStats('all', summarize(tickets, now));
@@ -115,7 +123,7 @@
       const d = new Date(); d.setDate(d.getDate() - i);
       const key = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       labels.push(`${pad(d.getMonth()+1)}-${pad(d.getDate())}`);
-      values.push(tickets.filter(t => (t.create_date || '').startsWith(key)).length);
+      values.push(tickets.filter(t => dateKey(t.create_date) === key).length);
     }
     return { labels, values };
   }
@@ -141,7 +149,7 @@
     return v.filter(isFilledItem).sort((a, b) => (a.seqNo || 0) - (b.seqNo || 0));
   }
 
-  // 正在进行中的任务的操作时间 / 批准时间（无则回退到执行日期）
+  // 正在执行中的任务的操作时间 / 批准时间；只拟票完成、没有这两个时间的票不计入逾期
   function progressTime(t) {
     const items = parseItems(t);
     for (const it of items) {
@@ -151,8 +159,7 @@
       const d = new Date(s);
       if (!isNaN(d)) return d;
     }
-    const d = t.execute_date ? new Date(t.execute_date) : null;
-    return d && !isNaN(d) ? d : null;
+    return null;
   }
 
   function calcAlerts(tickets, now) {

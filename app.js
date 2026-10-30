@@ -143,7 +143,13 @@ const app = (() => {
       let query = supabase.from('tickets').select('*');
       if (state.query.workType) query = query.eq('work_type', state.query.workType);
       if (state.query.workCode) query = query.ilike('work_code', `%${state.query.workCode}%`);
-      if (state.query.executeDate) query = query.ilike('execute_date', `${state.query.executeDate}%`);
+      if (state.query.executeDate) {
+        // execute_date 是 timestamptz 类型，不能用 ilike（PostgREST 会报 42883）；
+        // 且入库时存的是所选日期的 UTC 零点，按 [当日0点, 次日0点) 区间查询
+        const start = `${state.query.executeDate}T00:00:00Z`;
+        const end = new Date(Date.parse(start) + 86400000).toISOString();
+        query = query.gte('execute_date', start).lt('execute_date', end);
+      }
       if (state.query.workContent) query = query.ilike('work_content', `%${state.query.workContent}%`);
       query = query.order('create_date', { ascending: false });
       const { data, error } = await query;
@@ -651,6 +657,7 @@ const app = (() => {
     const workType = $('t-work-type').value;
     if (!workContent) { alert('请填写工作内容'); return; }
     if (!workType) { alert('请选择工作类型'); return; }
+    if (state.formItems.length === 0) { alert('请至少添加一条指令明细'); return; }
 
     const items = state.formItems.map(it => ({ ...it }));
     const allFinish = items.length > 0 && items.every(it => isItemComplete(it));
@@ -689,7 +696,11 @@ const app = (() => {
       const { data: today, error: qerr } = await supabase
         .from('tickets').select('ticket_no').like('ticket_no', `JYD${datePart}%`);
       if (qerr) { alertErr('查询票号', qerr); return; }
-      const seq = (today || []).length + 1;
+      // 取当天已用编号的最大序号 +1，避免删除后重新生成重号
+      const seq = (today || []).reduce((max, r) => {
+        const n = parseInt(String(r.ticket_no || '').slice(-3), 10);
+        return isNaN(n) ? max : Math.max(max, n);
+      }, 0) + 1;
       const ticketNo = `JYD${datePart}${String(seq).padStart(3, '0')}`;
 
       const payload = {
@@ -763,7 +774,21 @@ const app = (() => {
     renderList();
   };
 
-  const printTicket = () => { window.print(); };
+  // 打印前强制隐藏看板与列表（内联 !important 优先级最高，确保任何浏览器下都不打印看板内容）
+  const printTicket = () => {
+    const hiddenViews = [$('list-view'), $('dashboard-view')].filter(Boolean);
+    hiddenViews.forEach(el => el.style.setProperty('display', 'none', 'important'));
+    let restored = false;
+    const restore = () => {
+      if (restored) return;
+      restored = true;
+      hiddenViews.forEach(el => el.style.removeProperty('display'));
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    window.print();
+    setTimeout(restore, 800);
+  };
 
   // ========== 登录鉴权 ==========
   const login = async () => {
