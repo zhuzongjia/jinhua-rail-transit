@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>金华市轨道交通供电系统调度操作指令票系统</title>
+  <link rel="stylesheet" href="style.css?v=20261030g">
+  <link rel="stylesheet" href="dashboard.css?v=20261030g">
+  <!-- Supabase JS SDK（CDN） -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <!-- Supabase 项目配置 -->
+  <script src="config.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header" id="app-header">
+      <div class="header-left">
+        <img src="assets/jinhua_logo.jpg?v=3" alt="金华轨道交通" class="logo-img">
+        <span class="header-time" id="current-time"></span>
+      </div>
+      <h1 class="header-title">金华市轨道交通供电系统调度操作指令票系统</h1>
+      <div class="header-meta">
+        <span class="user-info" id="user-info"></span>
+        <button class="btn btn-header" id="btn-logout" onclick="app.logout()">退出</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- 列表/查询视图 -->
+      <section id="list-view" class="view">
+        <div class="page-title">
+          <h2>指令票管理</h2>
+          <div>
+            <button class="btn btn-primary" onclick="app.showDashboard()">综合看板</button>
+            <button class="btn btn-primary" onclick="app.showForm()">新增指令票</button>
+          </div>
+        </div>
+
+        <div class="card query-card">
+          <div class="card-title">查询条件</div>
+          <div class="query-grid">
+            <div class="field">
+              <label>工作类型</label>
+              <select id="q-work-type">
+                <option value="">全部</option>
+                <option value="倒闸操作">倒闸操作</option>
+                <option value="施工作业">施工作业</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>作业代码</label>
+              <input type="text" id="q-work-code" placeholder="请输入作业代码">
+            </div>
+            <div class="field">
+              <label>执行日期</label>
+              <input type="date" id="q-execute-date">
+            </div>
+            <div class="field">
+              <label>工作内容</label>
+              <input type="text" id="q-work-content" placeholder="请输入工作内容关键词">
+            </div>
+            <div class="field field-actions">
+              <button class="btn btn-default" onclick="app.resetQuery()">重置</button>
+              <button class="btn btn-primary" onclick="app.search()">查询</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <div class="table-toolbar">
+            <span class="total-info">共 <strong id="total-count">0</strong> 条记录</span>
+            <div class="page-size">
+              <label>每页显示</label>
+              <select id="page-size" onchange="app.changePageSize()">
+                <option value="10">10条</option>
+                <option value="20">20条</option>
+                <option value="50">50条</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:50px">序号</th>
+                  <th style="width:140px">指令票编号</th>
+                  <th class="col-work-content">工作内容</th>
+                  <th style="width:100px">作业代码</th>
+                  <th style="width:90px">工作类型</th>
+                  <th style="width:120px">倒闸命令编号</th>
+                  <th style="width:120px">作业命令编号</th>
+                  <th style="width:100px">创建日期</th>
+                  <th style="width:100px">执行日期</th>
+                  <th style="width:80px">状态</th>
+                  <th style="width:170px">操作</th>
+                </tr>
+              </thead>
+              <tbody id="ticket-list"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </section>
+
+      <!-- 表单/详情视图 -->
+      <section id="form-view" class="view hidden">
+        <div class="form-header">
+          <div class="form-actions">
+            <button class="btn btn-default" id="btn-print" onclick="app.printTicket()">打印 / 导出PDF</button>
+            <button class="btn btn-primary" onclick="app.backToList()">返回</button>
+            <button class="btn btn-primary" id="btn-save" onclick="app.saveTicket()">保存</button>
+          </div>
+        </div>
+
+        <div class="ticket-sheet" id="ticket-sheet">
+          <div class="sheet-title">金华市轨道交通供电系统调度操作指令票</div>
+
+          <div class="sheet-meta">
+            <div class="meta-row">
+              <div class="meta-item meta-large">
+                <label>工作内容</label>
+                <textarea id="t-work-content" placeholder="手动填写" rows="2"></textarea>
+              </div>
+              <div class="meta-item">
+                <label>作业代码</label>
+                <input type="text" id="t-work-code" placeholder="手动填写">
+              </div>
+              <div class="meta-item">
+                <label>工作类型</label>
+                <select id="t-work-type">
+                  <option value="">请选择</option>
+                  <option value="倒闸操作">倒闸操作</option>
+                  <option value="施工作业">施工作业</option>
+                </select>
+              </div>
+              <div class="meta-item">
+                <label>指令票编号</label>
+                <input type="text" id="t-ticket-no" readonly placeholder="自动生成">
+              </div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-item">
+                <label>拟票人</label>
+                <input type="text" id="t-creator" placeholder="手动填写">
+              </div>
+              <div class="meta-item">
+                <label>核票人</label>
+                <input type="text" id="t-reviewer" placeholder="手动填写">
+              </div>
+              <div class="meta-item">
+                <label>拟票日期</label>
+                <input type="datetime-local" id="t-create-date">
+              </div>
+              <div class="meta-item">
+                <label>执行日期</label>
+                <input type="date" id="t-execute-date">
+              </div>
+            </div>
+          </div>
+
+          <div class="items-section">
+            <div class="section-title">
+              <span>指令明细</span>
+              <span class="section-hint">序号随指令类型自动递增，可添加多行</span>
+            </div>
+            <div id="items-container"></div>
+            <button class="btn btn-add-item" onclick="app.addItem()">+ 添加指令项</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 综合看板视图 -->
+      <section id="dashboard-view" class="view hidden dashboard-view">
+        <div class="dashboard-bar">
+          <button class="btn btn-primary" onclick="app.showList()">返回</button>
+        </div>
+        <div class="board">
+          <main class="board-main">
+            <section class="panel panel-manage">
+              <div class="panel-head">
+                <span class="panel-title">操作票管理</span>
+              </div>
+              <div class="panel-body">
+                <table class="stat-table">
+                  <thead>
+                    <tr>
+                      <th class="stat-row-label"></th>
+                      <th>总数</th>
+                      <th>倒闸操作</th>
+                      <th>施工作业</th>
+                      <th>执行中</th>
+                      <th>未完成</th>
+                      <th>已完成</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th class="stat-row-label">今日</th>
+                      <td class="c-blue" data-stat="today-total">0</td>
+                      <td class="c-yellow" data-stat="today-switch">0</td>
+                      <td class="c-yellow" data-stat="today-work">0</td>
+                      <td class="c-orange" data-stat="today-progress">0</td>
+                      <td class="c-red" data-stat="today-undone">0</td>
+                      <td class="c-green" data-stat="today-done">0</td>
+                    </tr>
+                    <tr>
+                      <th class="stat-row-label">总计</th>
+                      <td class="c-blue" data-stat="all-total">0</td>
+                      <td class="c-yellow" data-stat="all-switch">0</td>
+                      <td class="c-yellow" data-stat="all-work">0</td>
+                      <td class="c-orange" data-stat="all-progress">0</td>
+                      <td class="c-red" data-stat="all-undone">0</td>
+                      <td class="c-green" data-stat="all-done">0</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel panel-lifecycle">
+              <div class="panel-head">
+                <span class="panel-title">指令票全生命周期</span>
+              </div>
+              <div class="panel-body">
+                <div id="lifecycle-list" class="lifecycle-list"></div>
+              </div>
+            </section>
+
+            <section class="panel panel-worktype">
+              <div class="panel-head">
+                <span class="panel-title">工作类型分布</span>
+              </div>
+              <div class="panel-body wt-body">
+                <div class="wt-cell">
+                  <div class="wt-label" id="wt-label-today"></div>
+                  <div class="chart-wrap">
+                    <div id="chart-worktype-today" class="chart"></div>
+                  </div>
+                </div>
+                <div class="wt-cell">
+                  <div class="wt-label" id="wt-label-month"></div>
+                  <div class="chart-wrap">
+                    <div id="chart-worktype-month" class="chart"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel panel-trend">
+              <div class="panel-head">
+                <span class="panel-title">工作量趋势</span>
+              </div>
+              <div class="panel-body chart-wrap">
+                <div id="chart-trend" class="chart"></div>
+              </div>
+            </section>
+          </main>
+
+          <footer class="board-foot">
+            <section class="panel panel-alert">
+              <div class="panel-head">
+                <span class="panel-title">安全合规预警</span>
+              </div>
+              <div class="panel-body alert-list" id="alert-list"></div>
+            </section>
+          </footer>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 登录层 -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-box">
+      <div class="login-logo">
+        <img src="assets/login_logo.jpg?v=1" alt="金华轨道交通">
+      </div>
+      <div class="login-title">金华市轨道交通供电系统<br>调度操作指令票系统</div>
+      <div class="login-form">
+        <div class="login-field">
+          <label>用户名</label>
+          <input type="text" id="login-username" placeholder="请输入用户名" autocomplete="username">
+        </div>
+        <div class="login-field">
+          <label>密码</label>
+          <input type="password" id="login-password" placeholder="请输入密码" autocomplete="current-password">
+        </div>
+        <div class="login-error" id="login-error"></div>
+        <button class="btn btn-primary btn-login" onclick="app.login()">登 录</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js?v=20261030k"></script>
+  <script src="app.js?v=20261030b"></script>
+</body>
+</html>

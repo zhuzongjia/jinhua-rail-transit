@@ -1,0 +1,147 @@
+/* ============================================================
+   综合看板样式 · 白色清爽风（与主系统新增指令票一致）
+   复用 style.css 设计变量：--primary / --card-bg / --border / --text ...
+   ============================================================ */
+
+/* ---- 看板视图容器 ---- */
+.dashboard-view {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+/* ---- 看板顶部操作条（与新增指令票页表单头部一致：按钮右对齐） ---- */
+.dashboard-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 18px;
+  flex: 0 0 auto;
+}
+
+/* ---- 看板主体 ---- */
+.dashboard-view .board {
+  width: 100%; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 0;
+}
+
+/* ---- 主体两行两栏布局 ---- */
+.board-main {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 18px;
+}
+
+/* ---- 面板通用（与 .card 风格一致） ---- */
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  display: flex; flex-direction: column;
+  position: relative;
+  min-height: 0;
+}
+.panel-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.panel-sub { font-size: 12px; color: var(--text-secondary); letter-spacing: 0.05em; }
+.panel-body { flex: 1; min-height: 0; }
+
+/* 操作票管理统计表 */
+.stat-table { width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed; }
+.stat-table th, .stat-table td { padding: 8px 4px; text-align: center; font-size: 13px; }
+.stat-table thead th { color: var(--text-secondary); font-weight: 500; font-size: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.stat-table tbody th { color: var(--text-secondary); font-weight: 600; text-align: left; padding-left: 8px; font-size: 13px; }
+.stat-table tbody tr + tr th, .stat-table tbody tr + tr td { border-top: 1px dashed var(--border); }
+.stat-table td {
+  font-family: "DIN Alternate", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 30px; font-weight: 700; line-height: 1.15;
+}
+.c-blue { color: #2563eb; text-shadow: 0 0 12px rgba(37, 99, 235, 0.28); }
+.c-yellow { color: #eab308; text-shadow: 0 0 12px rgba(234, 179, 8, 0.28); }
+.c-orange { color: #f97316; text-shadow: 0 0 12px rgba(249, 115, 22, 0.28); }
+.c-red { color: #dc2626; text-shadow: 0 0 12px rgba(220, 38, 38, 0.28); }
+.c-green { color: #16a34a; text-shadow: 0 0 12px rgba(22, 163, 74, 0.28); }
+
+/* 指令票全生命周期（表格 + 横向进度条） */
+.panel-lifecycle .panel-body { overflow: hidden; }
+.lifecycle-list { height: 100%; overflow-y: auto; }
+.lc-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.lc-table th {
+  font-size: 12px; font-weight: 500; color: var(--text-secondary); text-align: left;
+  padding: 8px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--card-bg); z-index: 1;
+}
+.lc-table th:first-child { width: 24%; }
+.lc-table th:nth-child(2) { width: 42%; }
+.lc-content { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
+.lc-table td {
+  padding: 10px 8px; font-size: 13px; color: var(--text);
+  border-bottom: 1px dashed var(--border); vertical-align: middle;
+}
+.lc-no { font-family: "DIN Alternate", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: 0.02em; }
+.lc-progress { display: flex; align-items: center; gap: 8px; }
+.lc-bar-wrap { flex: 1; height: 10px; border-radius: 5px; background: #f1f5f9; overflow: hidden; }
+.lc-bar { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+.lc-pct { flex-shrink: 0; width: 46px; text-align: right; font-size: 12px; color: var(--text-secondary); }
+.lc-empty {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  color: #9ca3af; font-size: 14px;
+}
+
+/* 工作类型分布：当日 / 当月 两个饼图并排 */
+.wt-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wt-cell { display: flex; flex-direction: column; min-height: 0; }
+.wt-label { text-align: center; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.wt-cell .chart-wrap { flex: 1; min-height: 0; position: relative; }
+.wt-cell .chart { min-height: 0; }
+
+/* ---- 图表容器 ---- */
+.chart-wrap { position: relative; }
+.chart { width: 100%; height: 100%; min-height: 160px; }
+
+/* ---- 底部 ---- */
+.board-foot {
+  flex-shrink: 0;
+  display: grid; grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+/* 预警 */
+.alert-list { padding: 2px 0; overflow-y: auto; max-height: 160px; }
+.alert-list.ok {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--success); font-size: 15px; letter-spacing: 0.05em; height: 100%;
+}
+.alert-list.ok::before {
+  content: '🛡️'; font-size: 32px; margin-bottom: 8px;
+}
+.alert-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; margin-bottom: 6px;
+  background: #fef2f2;
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+}
+.alert-row.warn { background: #fffbeb; border-left-color: var(--warning); }
+.alert-ico { font-size: 14px; }
+.alert-text { flex: 1; color: var(--text); font-size: 13px; }
+.alert-time { color: var(--text-secondary); font-size: 12px; }
+
+/* ---- 滚动条 ---- */
+.dashboard-view ::-webkit-scrollbar { width: 6px; height: 6px; }
+.dashboard-view ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.dashboard-view ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.dashboard-view ::-webkit-scrollbar-track { background: transparent; }
